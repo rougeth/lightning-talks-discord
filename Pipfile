@@ -1,0 +1,20 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+"discord.py" = "*"
+python-decouple = "*"
+motor = "*"
+pytest-asyncio = "*"
+
+[dev-packages]
+ipython = "*"
+ipdb = "*"
+pytest = "*"
+pytest-pythonpath = "*"
+pytest-asyncio = "*"
+
+[requires]
+python_version = "3.9"
