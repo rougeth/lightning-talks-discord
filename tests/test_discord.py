@@ -4,7 +4,11 @@ from unittest import mock
 import discord
 import pytest
 
-from lightning.bot import CATEGORY_NAME, CHANNEL_NAME, get_or_create_lightning_talk_channel
+from lightning.bot import (
+    CATEGORY_NAME,
+    CHANNEL_NAME,
+    get_or_create_lightning_talk_channel,
+)
 
 
 @pytest.mark.asyncio
@@ -22,7 +26,9 @@ async def test_get_or_create_lightning_talk_channel_no_category():
 
 @pytest.mark.asyncio
 async def test_get_or_create_lightning_talk_channel_no_channel():
-    mocked_category = mock.AsyncMock(text_channels=[], type=discord.ChannelType.category)
+    mocked_category = mock.AsyncMock(
+        text_channels=[], type=discord.ChannelType.category
+    )
     mocked_category.name = CATEGORY_NAME
 
     mocked_guild = mock.AsyncMock()
@@ -39,7 +45,9 @@ async def test_get_or_create_lightning_talk_channel_with_category_and_channel():
     mocked_channel = mock.AsyncMock()
     mocked_channel.name = CHANNEL_NAME
 
-    mocked_category = mock.AsyncMock(text_channels=[mocked_channel], type=discord.ChannelType.category)
+    mocked_category = mock.AsyncMock(
+        text_channels=[mocked_channel], type=discord.ChannelType.category
+    )
     mocked_category.name = CATEGORY_NAME
 
     mocked_guild = mock.AsyncMock()

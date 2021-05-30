@@ -20,6 +20,7 @@ CHANNEL_NAME = "quero-participar"
 
 bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 
+
 def render(template, **kwargs):
     t = Template(template)
     return t.render(**kwargs)
@@ -51,8 +52,8 @@ async def build(ctx, *args):
     await ctx.message.add_reaction("✅")
 
 
-@pr.command()
-async def iniciar(ctx, *args):
+@pr.command(name="iniciar")
+async def init(ctx, *args):
     lt = await db.check_active_lightning_talk(ctx.guild.id)
     if lt:
         await ctx.channel.send("There is an active lightning talk!")
@@ -63,6 +64,20 @@ async def iniciar(ctx, *args):
     await db.create_lightning_talk(ctx.guild.id, message.id)
     await ctx.message.add_reaction("✅")
 
+
+@pr.command(name="encerrar")
+async def close(ctx, *args):
+    lt = await db.check_active_lightning_talk(ctx.guild.id)
+    if not lt:
+        await ctx.channel.send("There is no active lightning talk!")
+        return
+
+    await db.close_lightning_talk(lt["guild_id"], lt["message_id"])
+
+    message = await ctx.fetch_message(lt["message_id"])
+    await message.edit(content=render(templates.NOT_ACTIVE_LIGHTNING_TALK))
+
+    await ctx.message.add_reaction("✅")
 
 
 if __name__ == "__main__":
