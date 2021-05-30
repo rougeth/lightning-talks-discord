@@ -8,6 +8,8 @@ name = "pypi"
 python-decouple = "*"
 motor = "*"
 pytest-asyncio = "*"
+jinja2 = "*"
+coverage = "*"
 
 [dev-packages]
 ipython = "*"
@@ -15,6 +17,8 @@ ipdb = "*"
 pytest = "*"
 pytest-pythonpath = "*"
 pytest-asyncio = "*"
+coverage = "*"
+pytest-cov = "*"
 
 [requires]
 python_version = "3.9"

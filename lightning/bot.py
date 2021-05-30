@@ -6,8 +6,11 @@ from dataclasses import dataclass, field
 import discord
 from discord.ext import commands
 from discord.ext.tasks import loop
-
+from jinja2 import Template
 from decouple import config
+
+import templates
+import db
 
 
 DISCORD_TOKEN = config("DISCORD_TOKEN")
@@ -16,6 +19,10 @@ CHANNEL_NAME = "quero-participar"
 
 
 bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
+
+def render(template, **kwargs):
+    t = Template(template)
+    return t.render(**kwargs)
 
 
 async def get_or_create_lightning_talk_channel(guild: discord.Guild):
@@ -42,6 +49,20 @@ async def pr(ctx, *args):
 async def build(ctx, *args):
     await get_or_create_lightning_talk_channel(ctx.guild)
     await ctx.message.add_reaction("✅")
+
+
+@pr.command()
+async def iniciar(ctx, *args):
+    lt = await db.check_active_lightning_talk(ctx.guild.id)
+    if lt:
+        await ctx.channel.send("There is an active lightning talk!")
+        return
+
+    channel = await get_or_create_lightning_talk_channel(ctx.guild)
+    message = await channel.send(render(templates.NEW_LIGHTNING_TALK))
+    await db.create_lightning_talk(ctx.guild.id, message.id)
+    await ctx.message.add_reaction("✅")
+
 
 
 if __name__ == "__main__":
