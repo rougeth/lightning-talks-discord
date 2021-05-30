@@ -23,7 +23,8 @@ bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 
 def render(template, **kwargs):
     t = Template(template)
-    return t.render(**kwargs)
+    content = t.render(**kwargs)
+    return "**[beta]**\n\n" + content
 
 
 async def get_or_create_lightning_talk_channel(guild: discord.Guild):
