@@ -10,6 +10,7 @@ motor = "*"
 pytest-asyncio = "*"
 jinja2 = "*"
 coverage = "*"
+dnspython = "*"
 
 [dev-packages]
 ipython = "*"
