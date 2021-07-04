@@ -57,6 +57,7 @@ async def build(ctx, *args):
 async def init(ctx, *args):
     lt = await db.check_active_lightning_talk(ctx.guild.id)
     if lt:
+        await ctx.message.add_reaction("❌")
         await ctx.channel.send("There is an active lightning talk!")
         return
 
@@ -69,8 +70,9 @@ async def init(ctx, *args):
 @pr.command(name="encerrar")
 async def close(ctx, *args):
     lt = await db.check_active_lightning_talk(ctx.guild.id)
-    if not lt:
-        await ctx.channel.send("There is no active lightning talk!")
+    if not lt or not lt["open_registration"]:
+        await ctx.message.add_reaction("❌")
+        await ctx.channel.send("There is no lightning talk in progress or open for registration!")
         return
 
     await db.close_lightning_talk(lt["guild_id"], lt["message_id"])
