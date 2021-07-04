@@ -11,6 +11,7 @@ pytest-asyncio = "*"
 jinja2 = "*"
 coverage = "*"
 dnspython = "*"
+loguru = "*"
 
 [dev-packages]
 ipython = "*"
