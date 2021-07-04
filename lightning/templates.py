@@ -1,3 +1,8 @@
+ANNOUNCEMENT = """
+⏰ Palestras Relâmpago começando em **{{ waiting_time }} : 00**
+"""
+
+
 NEW_LIGHTNING_TALK = """
 ⚡️⚡️⚡️ **Palestras Relâmpago** ⚡️⚡️⚡️
 

@@ -2,6 +2,8 @@ import re
 import typing
 from collections import defaultdict
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from random import shuffle
 
 import discord
 from discord.ext import commands
@@ -64,6 +66,20 @@ async def init(ctx, *args):
     channel = await get_or_create_lightning_talk_channel(ctx.guild)
     message = await channel.send(render(templates.NEW_LIGHTNING_TALK))
     await db.create_lightning_talk(ctx.guild.id, message.id)
+    await ctx.message.add_reaction("✅")
+
+
+@pr.command(name="aviso")
+async def anouncement(ctx, channel: discord.TextChannel, minutes: int, *args):
+    lt = await db.check_active_lightning_talk(ctx.guild.id)
+    if lt:
+        await ctx.message.add_reaction("❌")
+        await ctx.channel.send("There is an active lightning talk!")
+        return
+
+    hours = minutes // 60
+    minutes = minutes % 60
+    await channel.send(render(templates.ANNOUNCEMENT, waiting_time=f"{hours:02d} : {minutes:02d}"))
     await ctx.message.add_reaction("✅")
 
 
