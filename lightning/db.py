@@ -14,6 +14,7 @@ def mongo_query(f):
     async def decorator(*args, **kwargs):
         result = await f(*args, **kwargs)
         return result or {}
+
     return decorator
 
 
@@ -103,5 +104,20 @@ async def remove_speaker_from_queue(lt, user):
         },
         {
             "$pull": {"speakers_queue": user},
+        },
+    )
+
+
+@mongo_query
+async def invite_speaker(lt, user_id, invite_message_id):
+    lt["speakers"][str(user_id)]["invited"] = True
+    lt["speakers"][str(user_id)]["invite_message_id"] = invite_message_id
+    return await db.lightning_talks.update_one(
+        {
+            "guild_id": lt["guild_id"],
+            "message_id": lt["message_id"],
+        },
+        {
+            "$set": {"speakers": lt["speakers"]},
         },
     )

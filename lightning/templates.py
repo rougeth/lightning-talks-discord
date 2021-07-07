@@ -46,12 +46,12 @@ TODO: Instruções de como participar
 
 Inscrições:
 {%- for speaker, data in speakers.items() %}
-{%- if data.invited and data.not_confirmed %}
-- ⏰ <@{{ speaker }}>
+{%- if data.invited and not data.confirmed %}
+⏰ <@{{ speaker }}>
 {%- elif data.invited and data.confirmed %}
-- ✅ <@{{ speaker }}>
+✅ <@{{ speaker }}>
 {%- else %}
-- <@{{ speaker }}>
+<@{{ speaker }}>
 {%- endif %}
 {%- endfor %}
 """
