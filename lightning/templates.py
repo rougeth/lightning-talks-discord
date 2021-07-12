@@ -46,3 +46,11 @@ LIGHTNING_TALK_SPEAKERS_ORDER = BASE_MAIN_MESSAGE + """
 {%- endif %}
 {%- endfor %}
 """
+
+INVITE = """
+Olá {{ speaker }}! Acesse a url abaixo para participar da palestra relâmpago:
+
+**{{ link }}**
+
+Boa apresentação! 🎉
+"""

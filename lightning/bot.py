@@ -22,6 +22,7 @@ CHANNEL_NAME = "quero-participar"
 ORG_CHANNEL_NAME = "org-only"
 
 JOIN_QUEUE_EMOJI = "☝️"
+DECLINE_INVITATION_EMOJI = "❌"
 
 
 bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
@@ -211,25 +212,22 @@ async def invite(ctx, user: discord.User, link: str, *args):
         await ctx.channel.send("Palestrante não está na lista de usuários")
         return
 
-    lt = await db.check_in_progress_lightning_talk(ctx.guild.id)
-
-    channel = await get_or_create_lightning_talk_channel(ctx.guild, None)
-    message = await channel.fetch_message(lt["message_id"])
-    await message.edit(
-        content=render(templates.LIGHTNING_TALK_SPEAKERS_ORDER, speakers=lt["speakers"])
-    )
+    message = await user.send(render(templates.INVITE, speaker=user.mention, link=link))
+    await db.invite_speaker(user.id, message.id)
+    await ctx.message.add_reaction("✅")
 
 
 @bot.event
 async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
-    message = reaction.message
-    guild_id = message.guild.id
+    if not reaction.message.guild:
+        logger.debug("Reaction not in a channel")
+        return
 
-    lt = await db.check_in_progress_lightning_talk(guild_id)
+    message = reaction.message
+    lt = await db.check_in_progress_lightning_talk(message.guild.id)
     checks = [
         not lt,
         lt.get("message_id") != message.id,
-        not lt.get("in_progress"),
         not lt.get("open_registration"),
         user.bot,
     ]
@@ -240,9 +238,9 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
     if reaction.emoji == JOIN_QUEUE_EMOJI:
         await db.add_speaker_to_queue(lt, user.id)
         logger.info(
-            f"User added to speakers queue. guild_id={guild_id!r}, user={user!r}"
+            f"User added to speakers queue. guild_id={message.guild.id!r}, user={user!r}"
         )
-        lt = await db.check_in_progress_lightning_talk(guild_id)
+        lt = await db.check_in_progress_lightning_talk(message.guild.id)
         await message.edit(
             content=render(
                 templates.LIGHTNING_TALK_IN_PROGRESS, speakers=lt["speakers_queue"]
@@ -252,10 +250,13 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
 
 @bot.event
 async def on_reaction_remove(reaction: discord.Reaction, user: discord.User):
-    message = reaction.message
-    guild_id = message.guild.id
+    if not reaction.message.guild:
+        logger.debug("Reaction not in a channel")
+        return
 
-    lt = await db.check_in_progress_lightning_talk(guild_id)
+    message = reaction.message
+
+    lt = await db.check_in_progress_lightning_talk(message.guild.id)
     checks = [
         not lt,
         lt.get("message_id") != message.id,
@@ -269,8 +270,8 @@ async def on_reaction_remove(reaction: discord.Reaction, user: discord.User):
 
     await db.add_speaker_to_queue(lt, user.id)
     await db.remove_speaker_from_queue(lt, user.id)
-    logger.info(f"User added to speakers queue. guild_id={guild_id!r}, user={user!r}")
-    lt = await db.check_in_progress_lightning_talk(guild_id)
+    logger.info(f"User added to speakers queue. guild_id={message.guild.id!r}, user={user!r}")
+    lt = await db.check_in_progress_lightning_talk(message.guild.id)
     await message.edit(
         content=render(
             templates.LIGHTNING_TALK_IN_PROGRESS, speakers=lt["speakers_queue"]
