@@ -1,6 +1,13 @@
-ANNOUNCEMENT = """
-⏰ Palestras Relâmpago começando em **{{ waiting_time }} : 00**
+HELP = """
+`pr!ajuda`: Apresenta esta mensagem
+`pr!config #canal`: Configura qual canal será usado por mim para divulgar e gerenciar as palestras relâmpago. Idealmente, apenas eu terei acesso de escrita.
+`pr!iniciar`: Inicia uma nova sessão de palestras relâmpago
+`pr!encerrar-inscrições`: Encerrar inscrições de uma sessão de palestras relâmpago
+`pr!chamada`: Reordena aleatoriamente lista de inscrições e divulga ordem de chamada
+`pr!convidar @usuário https://url`: Envia por DM para @usuário, URL do convite para participar da palestra relâmpago
+`pr!encerrar`: Encerra sessão de palestras relâmpago
 """
+
 
 BASE_MAIN_MESSAGE = """
 ⚡️⚡️⚡️ **Palestras Relâmpago** ⚡️⚡️⚡️
@@ -67,8 +74,8 @@ Olá {{ speaker }}! Acesse a url abaixo para participar da palestra relâmpago:
 Boa apresentação! 🎉
 """
 
-FINISH_LIGHTNING_TALK = """"
-⚡️⚡ **Palestras Relâmpago encerradas!** ⚡⚡️️️️
+FINISH_LIGHTNING_TALK = """
+⚡️⚡ **Sessão de Palestras Relâmpago encerrada!** ⚡⚡️️️️
 
 Obrigado pela participação! 👏
 """

@@ -19,6 +19,24 @@ def mongo_query(f):
 
 
 @mongo_query
+async def config_guild(guild_id, channel_id):
+    return await db.guild_config.update_one(
+        {"guild_id": guild_id},
+        {
+            "$set": {
+                "guild_id": guild_id,
+                "channel_id": channel_id,
+            }
+        },
+        upsert=True,
+    )
+
+
+async def get_guild_config(guild_id):
+    return await db.guild_config.find_one({"guild_id": guild_id})
+
+
+@mongo_query
 async def check_in_progress_lightning_talk(guild_id):
     return await db.lightning_talks.find_one(
         {

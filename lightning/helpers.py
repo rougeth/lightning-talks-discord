@@ -1,6 +1,7 @@
 from functools import wraps
 import inspect
 from typing import Optional
+import discord
 
 from discord.ext import commands
 from jinja2 import Template
@@ -41,6 +42,12 @@ async def no_lt_in_progress(ctx: commands.Context):
         raise Exception("Já existe uma Palestra Relâmpago em andamento")
 
 
+async def guild_configured(ctx: commands.Context):
+    config = await db.get_guild_config(ctx.guild.id)
+    if not config:
+        raise Exception("Servidor ainda não configurado")
+
+
 def check_all(*functions):
     def decorator(f):
         @wraps(f)
@@ -78,3 +85,9 @@ def ctx_with_lt(function):
         return await function(ctx, *args, **kwargs)
 
     return wrapper
+
+
+async def get_message(guild: discord.Guild, lt):
+    config = await db.get_guild_config(guild.id)
+    channel = discord.utils.get(guild.channels, id=config["channel_id"])
+    return await channel.fetch_message(lt["message_id"])

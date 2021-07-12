@@ -57,20 +57,30 @@ async def get_or_create_lightning_talk_channel(
     return channel
 
 
+@bot.command(name="ajuda")
+@commands.guild_only()
+async def help(ctx, *args):
+    await ctx.message.channel.send(content=helpers.render(templates.HELP))
+    await ctx.message.add_reaction(CONFIRMATION_EMOJI)
+
+
 @bot.command()
 @commands.guild_only()
-async def build(ctx, org_role: discord.Role, *args):
-    await get_or_create_lightning_talk_channel(ctx.guild, org_role)
+async def config(ctx, channel: discord.TextChannel, *args):
+    await db.config_guild(ctx.guild.id, channel.id)
     await ctx.message.add_reaction(CONFIRMATION_EMOJI)
 
 
 @bot.command(name="iniciar")
-@helpers.check_all(helpers.no_lt_in_progress)
+@helpers.check_all(
+    helpers.guild_configured,
+    helpers.no_lt_in_progress,
+)
 @commands.guild_only()
 async def init(ctx, *args):
     channel = await get_or_create_lightning_talk_channel(ctx.guild, None)
     await channel.purge()
-    
+
     message = await channel.send(helpers.render(templates.NEW_LIGHTNING_TALK))
     await message.add_reaction("☝️")
     await db.create_lightning_talk(ctx.guild.id, message.id)
@@ -82,11 +92,13 @@ async def init(ctx, *args):
 
 @bot.command(name="encerrar-inscrições")
 @helpers.ctx_with_lt
-@helpers.check_all(helpers.is_open_for_registration)
+@helpers.check_all(
+    helpers.guild_configured,
+    helpers.is_open_for_registration,
+)
 @commands.guild_only()
 async def close(ctx, *args):
-    channel = await get_or_create_lightning_talk_channel(ctx.guild, None)
-    message = await channel.fetch_message(ctx.lt["message_id"])
+    message = await helpers.get_message(ctx.guild, ctx.lt)
     await db.close_lightning_talk(ctx.lt["guild_id"], ctx.lt["message_id"])
 
     await message.edit(content=helpers.render(templates.NOT_ACTIVE_LIGHTNING_TALK))
@@ -97,6 +109,7 @@ async def close(ctx, *args):
 @bot.command(name="chamada")
 @helpers.ctx_with_lt
 @helpers.check_all(
+    helpers.guild_configured,
     helpers.is_registration_closed,
     helpers.speakers_not_defined,
 )
@@ -115,8 +128,7 @@ async def define_speakers(ctx, *args):
 
     await db.set_speakers_order(ctx.lt, speakers)
     ctx.lt = await db.check_in_progress_lightning_talk(ctx.guild.id)
-    channel = await get_or_create_lightning_talk_channel(ctx.guild, None)
-    message = await channel.fetch_message(ctx.lt["message_id"])
+    message = await helpers.get_message(ctx.guild, ctx.lt)
     await message.edit(
         content=helpers.render(
             templates.LIGHTNING_TALK_SPEAKERS_ORDER, speakers=ctx.lt["speakers"]
@@ -128,6 +140,7 @@ async def define_speakers(ctx, *args):
 @bot.command(name="convidar")
 @helpers.ctx_with_lt
 @helpers.check_all(
+    helpers.guild_configured,
     helpers.is_registration_closed,
     helpers.speakers_defined,
 )
@@ -148,14 +161,14 @@ async def invite(ctx, user: discord.User, link: str, *args):
 @bot.command(name="encerrar")
 @helpers.ctx_with_lt
 @helpers.check_all(
+    helpers.guild_configured,
     helpers.is_registration_closed,
     helpers.speakers_defined,
 )
 @commands.guild_only()
 async def finish(ctx, *_):
     await db.finish_lightning_talk(ctx.lt)
-    channel = await get_or_create_lightning_talk_channel(ctx.guild, None)
-    message = await channel.fetch_message(ctx.lt["message_id"])
+    message = await helpers.get_message(ctx.guild, ctx.lt)
     await message.edit(content=helpers.render(templates.FINISH_LIGHTNING_TALK))
     await ctx.message.add_reaction(CONFIRMATION_EMOJI)
 
