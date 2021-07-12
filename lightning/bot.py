@@ -8,12 +8,12 @@ from random import shuffle
 import discord
 from discord.ext import commands
 from discord.ext.tasks import loop
-from jinja2 import Template
 from decouple import config
 from loguru import logger
 
 import templates
 import db
+import helpers
 
 
 DISCORD_TOKEN = config("DISCORD_TOKEN")
@@ -22,55 +22,11 @@ CHANNEL_NAME = "quero-participar"
 ORG_CHANNEL_NAME = "org-only"
 
 JOIN_QUEUE_EMOJI = "☝️"
+CONFIRMATION_EMOJI = "✅"
 DECLINE_INVITATION_EMOJI = "❌"
 
 
-bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
-
-
-def lt_not_in_progress(ctx, lt):
-    if not all(
-        [
-            lt,
-            lt.get("message_id") != ctx.message.id,
-            lt.get("in_progress"),
-        ]
-    ):
-        raise Exception("Não encontrei nenhuma palestra relâmpago iniciada")
-
-
-def lt_open_registration(ctx, lt):
-    if lt.get("open_registration"):
-        raise Exception("Inscrições estão abertas")
-
-
-def lt_speakers_defined(ctx, lt):
-    if lt.get("speakers"):
-        raise Exception("Lista de palestrantes já foi definida")
-
-
-def fail_command_on(*functions):
-    def decorator(f):
-        async def wrapper(ctx, *args, **kwargs):
-            lt = await db.check_in_progress_lightning_talk(ctx.guild.id)
-            for check in functions:
-                try:
-                    check(ctx, lt)
-                except Exception as e:
-                    await ctx.message.add_reaction("❌")
-                    await ctx.channel.send(str(e))
-                    return
-            return await f(ctx, *args, **kwargs)
-
-        return wrapper
-
-    return decorator
-
-
-def render(template, **kwargs):
-    t = Template(template)
-    content = t.render(**kwargs)
-    return "**[beta]**\n" + content
+bot = commands.Bot(command_prefix="pr!", intents=discord.Intents.all())
 
 
 async def get_or_create_lightning_talk_channel(
@@ -101,78 +57,52 @@ async def get_or_create_lightning_talk_channel(
     return channel
 
 
-@bot.group(invoke_without_command=True)
-async def pr(ctx, *args):
-    await ctx.channel.send("TODO: help")
-
-
-@pr.command()
+@bot.command()
+@commands.guild_only()
 async def build(ctx, org_role: discord.Role, *args):
     await get_or_create_lightning_talk_channel(ctx.guild, org_role)
-    await ctx.message.add_reaction("✅")
+    await ctx.message.add_reaction(CONFIRMATION_EMOJI)
 
 
-@pr.command(name="iniciar")
+@bot.command(name="iniciar")
+@helpers.check_all(helpers.no_lt_in_progress)
+@commands.guild_only()
 async def init(ctx, *args):
-    lt = await db.check_in_progress_lightning_talk(ctx.guild.id)
-    if lt:
-        await ctx.message.add_reaction("❌")
-        await ctx.channel.send("There is an active lightning talk!")
-        return
-
     channel = await get_or_create_lightning_talk_channel(ctx.guild, None)
-    message = await channel.send(render(templates.NEW_LIGHTNING_TALK))
+    await channel.purge()
+    
+    message = await channel.send(helpers.render(templates.NEW_LIGHTNING_TALK))
     await message.add_reaction("☝️")
     await db.create_lightning_talk(ctx.guild.id, message.id)
-    await ctx.message.add_reaction("✅")
+    await ctx.message.add_reaction(CONFIRMATION_EMOJI)
     logger.info(
         f"Lightning talk initialized. guild_id={ctx.guild.id!r}, message_id={message.id!r}"
     )
 
 
-@pr.command(name="aviso")
-async def anouncement(ctx, channel: discord.TextChannel, minutes: int, *args):
-    lt = await db.check_in_progress_lightning_talk(ctx.guild.id)
-    if lt:
-        await ctx.message.add_reaction("❌")
-        await ctx.channel.send("There is an active lightning talk!")
-        return
-
-    hours = minutes // 60
-    minutes = minutes % 60
-    await channel.send(
-        render(templates.ANNOUNCEMENT, waiting_time=f"{hours:02d} : {minutes:02d}")
-    )
-    await ctx.message.add_reaction("✅")
-
-
-@pr.command(name="encerrar-inscrições")
+@bot.command(name="encerrar-inscrições")
+@helpers.ctx_with_lt
+@helpers.check_all(helpers.is_open_for_registration)
+@commands.guild_only()
 async def close(ctx, *args):
-    lt = await db.check_in_progress_lightning_talk(ctx.guild.id)
-    if not lt or not lt["open_registration"]:
-        await ctx.message.add_reaction("❌")
-        await ctx.channel.send(
-            "There is no lightning talk in progress or open for registration!"
-        )
-        return
-
     channel = await get_or_create_lightning_talk_channel(ctx.guild, None)
-    message = await channel.fetch_message(lt["message_id"])
-    await db.close_lightning_talk(lt["guild_id"], lt["message_id"])
+    message = await channel.fetch_message(ctx.lt["message_id"])
+    await db.close_lightning_talk(ctx.lt["guild_id"], ctx.lt["message_id"])
 
-    await message.edit(content=render(templates.NOT_ACTIVE_LIGHTNING_TALK))
+    await message.edit(content=helpers.render(templates.NOT_ACTIVE_LIGHTNING_TALK))
     await message.clear_reactions()
-    await ctx.message.add_reaction("✅")
+    await ctx.message.add_reaction(CONFIRMATION_EMOJI)
 
 
-@pr.command(name="chamada")
-@fail_command_on(
-    lt_not_in_progress,
-    lt_speakers_defined,
+@bot.command(name="chamada")
+@helpers.ctx_with_lt
+@helpers.check_all(
+    helpers.is_registration_closed,
+    helpers.speakers_not_defined,
 )
+@commands.guild_only()
 async def define_speakers(ctx, *args):
-    lt = await db.check_in_progress_lightning_talk(ctx.guild.id)
-    speakers_queue = lt["speakers_queue"]
+    speakers_queue = ctx.lt["speakers_queue"]
     shuffle(speakers_queue)
 
     speakers = {}
@@ -183,38 +113,51 @@ async def define_speakers(ctx, *args):
             "invited": False,
         }
 
-    await db.set_speakers_order(lt, speakers)
-    lt = await db.check_in_progress_lightning_talk(ctx.guild.id)
+    await db.set_speakers_order(ctx.lt, speakers)
+    ctx.lt = await db.check_in_progress_lightning_talk(ctx.guild.id)
     channel = await get_or_create_lightning_talk_channel(ctx.guild, None)
-    message = await channel.fetch_message(lt["message_id"])
+    message = await channel.fetch_message(ctx.lt["message_id"])
     await message.edit(
-        content=render(templates.LIGHTNING_TALK_SPEAKERS_ORDER, speakers=lt["speakers"])
+        content=helpers.render(
+            templates.LIGHTNING_TALK_SPEAKERS_ORDER, speakers=ctx.lt["speakers"]
+        )
     )
-    await ctx.message.add_reaction("✅")
+    await ctx.message.add_reaction(CONFIRMATION_EMOJI)
 
 
-@pr.command(name="convidar")
+@bot.command(name="convidar")
+@helpers.ctx_with_lt
+@helpers.check_all(
+    helpers.is_registration_closed,
+    helpers.speakers_defined,
+)
+@commands.guild_only()
 async def invite(ctx, user: discord.User, link: str, *args):
-    lt = await db.check_in_progress_lightning_talk(ctx.guild.id)
-    prechecks = [
-        not lt,
-        lt.get("open_registration"),
-        not lt.get("in_progress"),
-        not lt.get("speakers"),
-    ]
-    if any(prechecks):
-        await ctx.message.add_reaction("❌")
-        await ctx.channel.send("Não foi possível convidar palestrante")
-        return
-
-    if user.id not in lt["speakers_queue"]:
-        await ctx.message.add_reaction("❌")
+    if user.id not in ctx.lt["speakers_queue"]:
+        await ctx.message.add_reaction(DECLINE_INVITATION_EMOJI)
         await ctx.channel.send("Palestrante não está na lista de usuários")
         return
 
-    message = await user.send(render(templates.INVITE, speaker=user.mention, link=link))
-    await db.invite_speaker(user.id, message.id)
-    await ctx.message.add_reaction("✅")
+    message = await user.send(
+        helpers.render(templates.INVITE, speaker=user.mention, link=link)
+    )
+    await db.invite_speaker(ctx.lt, user.id, message.id)
+    await ctx.message.add_reaction(CONFIRMATION_EMOJI)
+
+
+@bot.command(name="encerrar")
+@helpers.ctx_with_lt
+@helpers.check_all(
+    helpers.is_registration_closed,
+    helpers.speakers_defined,
+)
+@commands.guild_only()
+async def finish(ctx, *_):
+    await db.finish_lightning_talk(ctx.lt)
+    channel = await get_or_create_lightning_talk_channel(ctx.guild, None)
+    message = await channel.fetch_message(ctx.lt["message_id"])
+    await message.edit(content=helpers.render(templates.FINISH_LIGHTNING_TALK))
+    await ctx.message.add_reaction(CONFIRMATION_EMOJI)
 
 
 @bot.event
@@ -242,7 +185,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
         )
         lt = await db.check_in_progress_lightning_talk(message.guild.id)
         await message.edit(
-            content=render(
+            content=helpers.render(
                 templates.LIGHTNING_TALK_IN_PROGRESS, speakers=lt["speakers_queue"]
             )
         )
@@ -270,10 +213,12 @@ async def on_reaction_remove(reaction: discord.Reaction, user: discord.User):
 
     await db.add_speaker_to_queue(lt, user.id)
     await db.remove_speaker_from_queue(lt, user.id)
-    logger.info(f"User added to speakers queue. guild_id={message.guild.id!r}, user={user!r}")
+    logger.info(
+        f"User added to speakers queue. guild_id={message.guild.id!r}, user={user!r}"
+    )
     lt = await db.check_in_progress_lightning_talk(message.guild.id)
     await message.edit(
-        content=render(
+        content=helpers.render(
             templates.LIGHTNING_TALK_IN_PROGRESS, speakers=lt["speakers_queue"]
         )
     )

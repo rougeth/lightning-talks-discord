@@ -12,29 +12,40 @@ Lembrando que Código de Conduta também se aplica as palestras relâmpago! Se v
 **Legal! Mas como funciona aqui no Discord?**
 - Após o encerramento das inscrições, vou embaralhar a lista de pessoas que querem participar e mandar aqui nesse canal a ordem de chamada. Todos os inscritos receberão uma notificação quando a lista for atualizada.
 - Alguns minutos antes das palestras relâmpago começarem, os convites serão enviados por mim no privado, aqui no Discord. E caso aconteça alguma desistência, os convites continuarão sendo enviados para as próximas pessoas da lista de chamada.
+"""
 
+
+NEW_LIGHTNING_TALK = (
+    BASE_MAIN_MESSAGE
+    + """
 **Show!! Quer participar, o que eu tenho que fazer?**
 Para se inscrever, basta clicar no emoji ☝️ abaixo que o seu nome aparecerá na lista.
 """
+)
 
 
-NEW_LIGHTNING_TALK = BASE_MAIN_MESSAGE
-
-
-NOT_ACTIVE_LIGHTNING_TALK = BASE_MAIN_MESSAGE + """
+NOT_ACTIVE_LIGHTNING_TALK = (
+    BASE_MAIN_MESSAGE
+    + """
 🥁 **Aguardando lista de chamada!** 🥁
 """
+)
 
 
-LIGHTNING_TALK_IN_PROGRESS = BASE_MAIN_MESSAGE + """
+LIGHTNING_TALK_IN_PROGRESS = (
+    NEW_LIGHTNING_TALK
+    + """
 **Inscrições**:
 {%- for speaker in speakers %}
-- <@{{ speaker }}>
+<@{{ speaker }}>
 {%- endfor %}
 """
+)
 
 
-LIGHTNING_TALK_SPEAKERS_ORDER = BASE_MAIN_MESSAGE + """
+LIGHTNING_TALK_SPEAKERS_ORDER = (
+    BASE_MAIN_MESSAGE
+    + """
 **Ordem de chamada**:
 {%- for speaker, data in speakers.items() %}
 {%- if data.invited and not data.confirmed %}
@@ -46,6 +57,7 @@ LIGHTNING_TALK_SPEAKERS_ORDER = BASE_MAIN_MESSAGE + """
 {%- endif %}
 {%- endfor %}
 """
+)
 
 INVITE = """
 Olá {{ speaker }}! Acesse a url abaixo para participar da palestra relâmpago:
@@ -53,4 +65,10 @@ Olá {{ speaker }}! Acesse a url abaixo para participar da palestra relâmpago:
 **{{ link }}**
 
 Boa apresentação! 🎉
+"""
+
+FINISH_LIGHTNING_TALK = """"
+⚡️⚡ **Palestras Relâmpago encerradas!** ⚡⚡️️️️
+
+Obrigado pela participação! 👏
 """

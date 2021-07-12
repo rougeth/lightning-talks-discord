@@ -121,3 +121,14 @@ async def invite_speaker(lt, user_id, invite_message_id):
             "$set": {"speakers": lt["speakers"]},
         },
     )
+
+
+@mongo_query
+async def finish_lightning_talk(lt):
+    return await db.lightning_talks.update_one(
+        {
+            "guild_id": lt["guild_id"],
+            "message_id": lt["message_id"],
+        },
+        {"$set": {"in_progress": False}},
+    )
