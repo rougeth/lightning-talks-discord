@@ -12,8 +12,7 @@ import db
 
 def render(template, **kwargs):
     t = Template(template)
-    content = t.render(**kwargs)
-    return "**[beta]**\n" + content
+    return t.render(**kwargs)
 
 
 def speakers_defined(ctx: commands.Context):
